@@ -1,3 +1,4 @@
+from cmath import log
 import contextlib, ctypes, logging, math, sys
 from OpenGL import GL as gl
 import glfw
@@ -9,6 +10,7 @@ scr_width = 500
 scr_height = 400
 
 global window
+
 
 
 
@@ -60,46 +62,6 @@ class Vec3:
 class Mesh:
     vao : np.uint8
     vbo : np.uint8
-    ebo : np.uint8
-
-    vertCount : np.uint16
-
- 
-    def __init__(self, verts, ind):
-        self.vertCount = len(ind)
-
-        self.vao = gl.glGenVertexArrays(1)
-        gl.glBindVertexArray(self.vao)
-
-        self.vbo = gl.glGenBuffers(1)
-        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.vbo)
-        array_type = (gl.GLfloat * len(verts))
-        gl.glBufferData(gl.GL_ARRAY_BUFFER, len(verts) * ctypes.sizeof(ctypes.c_float), array_type(*verts), gl.GL_STATIC_DRAW)
-
-        self.ebo = gl.glGenBuffers(1)
-        gl.glBindBuffer(gl.GL_ELEMENT_ARRAY_BUFFER, self.ebo)
-        array_type = (ctypes.c_uint16 * len(ind))
-        gl.glBufferData(gl.GL_ELEMENT_ARRAY_BUFFER, len(ind) * ctypes.sizeof(ctypes.c_uint16), array_type(*indices), gl.GL_STATIC_DRAW)
-        
-        gl.glEnableVertexAttribArray(0)
-        gl.glVertexAttribPointer(0, 3, gl.GL_FLOAT, False, 6 * ctypes.sizeof(ctypes.c_float), None)
-
-        gl.glEnableVertexAttribArray(1)
-        gl.glVertexAttribPointer(1, 3, gl.GL_FLOAT, False, 6 * ctypes.sizeof(ctypes.c_float),  ctypes.c_void_p(ctypes.sizeof(ctypes.c_float) * 3))
-
-    def Draw(self):
-        gl.glBindVertexArray(self.vao)
-        gl.glDrawElements(gl.GL_TRIANGLES, 6, gl.GL_UNSIGNED_INT, 0)
-
-    def Destroy(self):
-        gl.glDeleteVertexArrays(1, self.vao)
-        gl.glDeleteBuffers(1, self.vbo)
-        gl.glDeleteBuffers(1, self.ebo)
-
-
-class Mesh2:
-    vao : np.uint8
-    vbo : np.uint8
 
     vertCount : np.uint16
 
@@ -123,11 +85,11 @@ class Mesh2:
 
     def Draw(self):
         gl.glBindVertexArray(self.vao)
-        gl.glDrawArrays(gl.GL_TRIANGLES, self.vertCount, 0)
+        gl.glDrawArrays(gl.GL_TRIANGLES, 0, self.vertCount)
 
     def Destroy(self):
-        gl.glDeleteVertexArrays(1, self.vao)
-        gl.glDeleteBuffers(1, self.vbo)
+        gl.glDeleteVertexArrays(1, [self.vao])
+        gl.glDeleteBuffers(1, [self.vbo])
 
  
 
@@ -163,9 +125,9 @@ class Shader:
 
  
         success = gl.glGetProgramiv(self.program, gl.GL_VALIDATE_STATUS)
-
-        if not success:
-            print('ERROR::PROGRAM::COMPILATION_FAILED' + str(gl.glGetProgramInfoLog(self.program)))
+        log = str(gl.glGetProgramInfoLog(self.program))
+        if not success and len(log) > 3:
+            print('ERROR::PROGRAM::COMPILATION_FAILED' + log)
 
 
         self.Use()
@@ -179,38 +141,14 @@ class Shader:
         gl.glDeleteProgram(self.program)
 
 
- 
- 
- 
-
 class Object: 
 
     mesh : Mesh
     shader : Shader
 
-    def __init__(self, verts, ind, vertex, fragment):
-        self.shader = Shader(vertex, fragment)
-        self.mesh = Mesh(verts, ind)
-
-
-    def Draw(self):
-        self.shader.Use()
-        self.mesh.Draw()
-
-    
-    def Destroy(self):
-        self.mesh.Destroy()
-        self.shader.Destroy()
- 
-
-class Object2: 
-
-    mesh : Mesh2
-    shader : Shader
-
-    def __init__(self, verts, vertex, fragment):
-        self.shader = Shader(vertex, fragment)
-        self.mesh = Mesh2(verts)
+    def __init__(self, verts, shader):
+        self.shader = shader
+        self.mesh = Mesh(verts)
 
 
     def Draw(self):
@@ -223,18 +161,10 @@ class Object2:
         self.shader.Destroy()
 
 
- 
-vertices = (
-    -0.5,-0.5, 0.0, 0.0, 0.0, 0.5,
-    -0.5, 0.5, 0.0, 0.0, 1.0, 0.5,
-     0.5, 0.5, 0.0, 1.0, 1.0, 0.5,
-     0.5,-0.5, 0.0, 1.0, 0.0, 0.5
-)
+class ShaderManager:
+    default_diffuse : Shader
 
-indices : ctypes.c_uint16 = (
-    0, 1, 2,
-    0, 2, 3
-)
+
 
 squareVertsNoInd = (
     -0.5,-0.5, 0.0, 0.0, 0.0, 0.5,
@@ -242,7 +172,7 @@ squareVertsNoInd = (
      0.5, 0.5, 0.0, 1.0, 1.0, 0.5,
 
     -0.5,-0.5, 0.0, 0.0, 0.0, 0.5,
-    -0.5, 0.5, 0.0, 0.0, 1.0, 0.5,
+     0.5, 0.5, 0.0, 1.0, 1.0, 0.5,
      0.5,-0.5, 0.0, 1.0, 0.0, 0.5
 )
 
@@ -323,8 +253,9 @@ def CreateMainWindow():
 
 if (__name__ == '__main__'):
     CreateMainWindow() 
-    #testObj = Object(vertices, indices, vertShader, fragShader) 
-    testObj = Object2(squareVertsNoInd, vertShader, fragShader) 
+    #testObj = Object(vertices, indices, vertShader, fragShader)
+    shader = Shader(vertShader, fragShader)
+    testObj = Object(squareVertsNoInd, shader) 
 
     while(
         glfw.get_key(window, glfw.KEY_ESCAPE) != glfw.PRESS and 
