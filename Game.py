@@ -1,10 +1,11 @@
 from cmath import log
 import contextlib, ctypes, logging, math, sys
+from turtle import pos
 from OpenGL import GL as gl
 import glfw
 from ctypes import c_void_p
 import numpy as np
-
+import glm as glm
 
 scr_width = 500
 scr_height = 400
@@ -14,49 +15,49 @@ global window
 
 
 
-class Vec3:
-    x : float
-    y : float
-    z : float
+# class Vec3:
+#     x : float
+#     y : float
+#     z : float
 
-    def __init__(self, x : float, y : float, z : float):
-        self.x = x
-        self.y = y
-        self.z = z
+#     def __init__(self, x : float, y : float, z : float):
+#         self.x = x
+#         self.y = y
+#         self.z = z
 
-    def sqrMagnitude(self):
-        return self.x ** 2 + self.y ** 2 + self.y ** 2
+#     def sqrMagnitude(self):
+#         return self.x ** 2 + self.y ** 2 + self.y ** 2
 
-    def magnitude(self):
-        return np.sqrt(self.magnitude)
+#     def magnitude(self):
+#         return np.sqrt(self.magnitude)
 
-    def normalized(self):
-        return self / self.magnitude
+#     def normalized(self):
+#         return self / self.magnitude
 
-    def __add__(self, other):
-        return Vec3(self.x + other.x, self.y + other.y, self.z + other.z)
+#     def __add__(self, other):
+#         return Vec3(self.x + other.x, self.y + other.y, self.z + other.z)
 
-    def __sub__(self, other):
-        return Vec3(self.x - other.x, self.y - other.y, self.z - other.z)
+#     def __sub__(self, other):
+#         return Vec3(self.x - other.x, self.y - other.y, self.z - other.z)
 
-    def __mul__(self, other):
-        return Vec3(self.x * other.x, self.y * other.y, self.z * other.z)
-    def __mul__(self, other : float):
-        return Vec3(self.x * other, self.y * other, self.z * other)
+#     def __mul__(self, other):
+#         return Vec3(self.x * other.x, self.y * other.y, self.z * other.z)
+#     def __mul__(self, other : float):
+#         return Vec3(self.x * other, self.y * other, self.z * other)
 
-    def __truediv__(self, other):
-        return Vec3(self.x / other.x, self.y / other.y, self.z / other.z)
+#     def __truediv__(self, other):
+#         return Vec3(self.x / other.x, self.y / other.y, self.z / other.z)
 
-    def __mod__(self, other):
-        return Vec3(self.x % other.x, self.y % other.y, self.z % other.z)
-    def __mod__(self, other : float):
-        return Vec3(self.x % other, self.y % other, self.z % other)
+#     def __mod__(self, other):
+#         return Vec3(self.x % other.x, self.y % other.y, self.z % other.z)
+#     def __mod__(self, other : float):
+#         return Vec3(self.x % other, self.y % other, self.z % other)
 
-    def __str__(self):
-        return "(" + str(self.x) + ", " + str(self.y) + ", " + str(self.z) + ")"
+#     def __str__(self):
+#         return "(" + str(self.x) + ", " + str(self.y) + ", " + str(self.z) + ")"
 
-    def Tup(self):
-        return (self.x, self.y, self.z)
+#     def Tup(self):
+#         return (self.x, self.y, self.z)
 
 
 class Mesh:
@@ -161,8 +162,49 @@ class Object:
         self.shader.Destroy()
 
 
+class Camera:
+    pos : glm.vec3
+
+    yaw : float
+    pitch : float
+
+    forward : glm.vec3
+    right : glm.vec3
+    up : glm.vec3
+
+    perspective : glm.mat4
+
+    def __init__(self, pos : glm.vec3):
+        self.pos = pos
+        self.perspective = glm.perspective(glm.radians(45.0), scr_width / scr_height, 0.1, 100.0)
+
+
+class PlayerStats:
+    speed : float
+
+    def __init__(self):
+        self.speed = 100
+
+
+class Player:
+    cam : Camera
+    stats : PlayerStats
+
+    def __init__(self, pos : glm.vec3):
+        self.cam = Camera(pos)
+        self.stats = PlayerStats()
+
+
 class ShaderManager:
     default_diffuse : Shader
+
+    def __init__(self):
+        self.default_diffuse = Shader(vertShader, fragShader)
+
+    def Update(self, player : Player):
+        self.default_diffuse.Use()
+        gl.glUniform3f(gl.glGetUniformLocation(self.default_diffuse.program, "camPos"), player.cam.pos.x, player.cam.pos.y, player.cam.pos.z)
+        gl.glUniformMatrix4fv(gl.glGetUniformLocation(self.default_diffuse.program, "perspective"), 1, False, glm.value_ptr(player.cam.perspective))
 
 
 
@@ -184,9 +226,12 @@ layout (location = 1) in vec3 aCol;
 
 out vec3 vCol;
 
+uniform vec3 camPos;
+uniform mat4 perspective;
+
 void main()
 {
-    gl_Position = vec4(aPos, 1.0);
+    gl_Position = perspective * vec4(aPos - camPos, 1.0);
     vCol = aCol;
 }''' 
 
@@ -204,18 +249,6 @@ void main()
     FragColor = vec4(vCol, 1.0f);
 }'''
 
-
-
-
-def perspective_fov(fov, aspect_ratio, near_plane, far_plane):
-	num = 1.0 / np.tan(fov / 2.0)
-	num9 = num / aspect_ratio
-	return np.array([
-		[num9, 0.0, 0.0, 0.0],
-		[0.0, num, 0.0, 0.0],
-		[0.0, 0.0, far_plane / (near_plane - far_plane), -1.0],
-		[0.0, 0.0, (near_plane * far_plane) / (near_plane - far_plane), 0.0]
-	])
 
  
 
@@ -246,22 +279,64 @@ def CreateMainWindow():
         sys.exit(2) 
     glfw.make_context_current(window) 
 
+    glfw.set_input_mode(window, glfw.STICKY_KEYS, glfw.TRUE)
+
  
     print('set background to dark blue') 
     gl.glClearColor(0, 0, 0.4, 0)
 
 
+
+global player
+global shaderManager
+global testObj
+
+ 
+def ProcessInputs(deltaTime):
+    global window
+    global player
+
+    if glfw.get_key(window, glfw.KEY_A) == glfw.PRESS:
+        player.cam.pos.x -= deltaTime * player.stats.speed
+
+    if glfw.get_key(window, glfw.KEY_D) == glfw.PRESS:
+        player.cam.pos.x += deltaTime * player.stats.speed
+
+    if glfw.get_key(window, glfw.KEY_S) == glfw.PRESS:
+        player.cam.pos.z += deltaTime * player.stats.speed
+
+    if glfw.get_key(window, glfw.KEY_W) == glfw.PRESS:
+        player.cam.pos.z -= deltaTime * player.stats.speed
+
+    if glfw.get_key(window, glfw.KEY_Q) == glfw.PRESS:
+        player.cam.pos.y -= deltaTime * player.stats.speed
+
+    if glfw.get_key(window, glfw.KEY_E) == glfw.PRESS:
+        player.cam.pos.y += deltaTime * player.stats.speed
+
+
 if (__name__ == '__main__'):
     CreateMainWindow() 
-    #testObj = Object(vertices, indices, vertShader, fragShader)
-    shader = Shader(vertShader, fragShader)
-    testObj = Object(squareVertsNoInd, shader) 
+
+    player = Player(glm.vec3(0, 0, -0.5))
+
+    shaderManager = ShaderManager()
+    testObj = Object(squareVertsNoInd, shaderManager.default_diffuse)
+
+    lastTime = glfw.get_time()
 
     while(
         glfw.get_key(window, glfw.KEY_ESCAPE) != glfw.PRESS and 
         not glfw.window_should_close(window) 
     ): 
-        gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT) 
+        deltaTime = glfw.get_time() - lastTime
+
+        ProcessInputs(deltaTime)
+        
+        print(str(player.cam.pos))
+        shaderManager.Update(player)
+
+        gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
         # Draw the triangle 
         testObj.Draw()
 
@@ -269,11 +344,11 @@ if (__name__ == '__main__'):
 
         glfw.poll_events()
 
+        lastTime = glfw.get_time()
+
     
     testObj.Destroy()
     
     
 
-    glfw.terminate() 
-
- 
+    glfw.terminate()
