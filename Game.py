@@ -203,10 +203,10 @@ class Object:
 class Camera:
     pos : glm.vec3
 
-    yaw : float
-    pitch : float
+    yaw : float = 90.0
+    pitch : float = 0.0
 
-    forward : glm.vec3
+    forward : glm.vec3 = glm.vec3(0)
     right : glm.vec3
     up : glm.vec3
 
@@ -215,19 +215,30 @@ class Camera:
 
     def __init__(self, pos : glm.vec3):
         self.pos = pos
-        self.perspective = glm.perspective(glm.radians(45.0), scr_width / scr_height, 0.1, 100.0)
-        self.FindDirections()
+        self.FindPerspective()
+        self.FindAllDirections()
+
+    def FindForward(self):
+        cosOfPitch = np.cos(glm.radians(self.pitch))
+        self.forward.x = np.cos(glm.radians(self.yaw)) * cosOfPitch
+        self.forward.y = np.sin(glm.radians(self.pitch))
+        self.forward.z = np.sin(glm.radians(self.yaw)) * cosOfPitch
+
+    def FindAllDirections(self):
+        self.FindForward()
+        self.right = glm.normalize(glm.cross(self.forward, glm.vec3(0, 1, 0)))
+        self.up = glm.cross(self.forward, self.right)
 
     def FindDirections(self):
-        self.forward = glm.normalize(-self.pos)
         self.right = glm.normalize(glm.cross(self.forward, glm.vec3(0, 1, 0)))
         self.up = glm.cross(self.forward, self.right)
 
     def FindView(self):
         #self.view = glm.lookAt(glm.vec3(self.pos.x, self.pos.y, -self.pos.z), glm.vec3(0), glm.vec3(0, 1, 0))
-        self.view = glm.mat4(self.right.x, self.up.x, -self.forward.x, 0, self.right.y, self.up.y, -self.forward.y, 0, self.right.z, self.up.z, -self.forward.z, 0, 0, 0, 0, 1) * glm.mat4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, -self.pos.x, 0, 0, 1)
+        self.view = glm.mat4(self.right.x, self.up.x, -self.forward.x, 0, self.right.y, self.up.y, -self.forward.y, 0, self.right.z, self.up.z, -self.forward.z, 0, 0, 0, 0, 1) * glm.mat4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, -self.pos.x, -self.pos.y, -self.pos.z, 1)
 
-
+    def FindPerspective(self):
+        self.perspective = glm.perspective(glm.radians(45.0), scr_width / scr_height, 0.1, 100.0)
 
 
 
@@ -235,7 +246,7 @@ class PlayerStats:
     speed : float
 
     def __init__(self):
-        self.speed = 100
+        self.speed = 500
 
 
 class Player:
@@ -303,7 +314,25 @@ void main()
 }'''
 
 
- 
+
+
+
+def FramebufferSizeCallback(window, width, height):
+    gl.glViewport(0, 0, width, height)
+    global scr_width
+    global scr_height
+
+    scr_width = width
+    scr_height = height
+
+    global player
+    player.cam.FindPerspective()
+
+
+def MouseCallback(window, xPos, yPos):
+    global player
+
+
 
 def CreateMainWindow():
     global window
@@ -332,6 +361,10 @@ def CreateMainWindow():
         sys.exit(2) 
     glfw.make_context_current(window) 
 
+    glfw.set_window_size_callback(window, FramebufferSizeCallback)
+    glfw.set_cursor_pos_callback(window, MouseCallback)
+
+    glfw.set_input_mode(window, glfw.CURSOR, glfw.CURSOR_DISABLED)
     glfw.set_input_mode(window, glfw.STICKY_KEYS, glfw.TRUE)
 
  
@@ -392,8 +425,11 @@ if (__name__ == '__main__'):
         deltaTime = time - lastTime
 
         player.cam.FindDirections()
+
         ProcessInputs(deltaTime)
+
         player.cam.FindView()
+
 
         testObj.transform.position = glm.vec3(00, 0, 0)
         testObj.transform.rotation = glm.vec3(0.1 * time, 0.2 * time, 0.3 * time)
