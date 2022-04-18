@@ -205,6 +205,7 @@ class Camera:
 
     yaw : float = 90.0
     pitch : float = 0.0
+    sensitivity : float = 0.1
 
     forward : glm.vec3 = glm.vec3(0)
     right : glm.vec3
@@ -329,8 +330,24 @@ def FramebufferSizeCallback(window, width, height):
     player.cam.FindPerspective()
 
 
+lastMouseX = scr_width / 2
+lastMouseY = scr_height / 2
 def MouseCallback(window, xPos, yPos):
+    global lastMouseX
+    global lastMouseY
     global player
+
+    xOffset = (xPos - lastMouseX) * player.cam.sensitivity
+    yOffset = (yPos - lastMouseY) * player.cam.sensitivity
+
+    player.cam.yaw += xOffset
+    player.cam.pitch += yOffset
+
+    player.cam.pitch = np.minimum(89.9, np.maximum(-89.9, player.cam.pitch))
+
+    lastMouseX = xPos
+    lastMouseY = yPos
+
 
 
 
@@ -424,7 +441,7 @@ if (__name__ == '__main__'):
         time = glfw.get_time()
         deltaTime = time - lastTime
 
-        player.cam.FindDirections()
+        player.cam.FindAllDirections()
 
         ProcessInputs(deltaTime)
 
