@@ -1,5 +1,6 @@
 from cmath import log
 import contextlib, ctypes, logging, math, sys
+from tkinter import Scale
 from turtle import pos
 from OpenGL import GL as gl
 import glfw
@@ -142,18 +143,55 @@ class Shader:
         gl.glDeleteProgram(self.program)
 
 
+class Transform:
+    position : glm.vec3
+    rotation : glm.vec3
+    scale : glm.vec3
+
+    currentMatrix : glm.mat4
+
+    def __init__(self):
+        self.position = glm.vec3(0.0)
+        self.rotation = self.position
+        self.scale = glm.vec3(1.0)
+
+        self.currentMatrix = glm.mat4(1.0)
+
+    def __init__(self, position : glm.vec3, rotation : glm.vec3, scale : glm.vec3):
+        self.position = position
+        self.rotation = rotation
+        self.scale = scale
+
+        self.FindCurrentMatrix()
+
+    def FindCurrentMatrix(self):
+        self.currentMatrix = glm.mat4(1.0)
+
+        self.currentMatrix = glm.translate(self.currentMatrix, self.position)
+
+        self.currentMatrix = glm.rotate(self.currentMatrix, self.rotation.z, glm.vec3(0.0, 0.0, 1.0))
+        self.currentMatrix = glm.rotate(self.currentMatrix, self.rotation.y, glm.vec3(0.0, 1.0, 0.0))
+        self.currentMatrix = glm.rotate(self.currentMatrix, self.rotation.x, glm.vec3(1.0, 0.0, 0.0))
+
+        self.currentMatrix = glm.scale(self.currentMatrix, self.scale)
+
+
 class Object: 
 
     mesh : Mesh
+    transform : Transform
     shader : Shader
 
     def __init__(self, verts, shader):
+        self.transform = Transform(glm.vec3(0.0), glm.vec3(0.0), glm.vec3(1.0))
         self.shader = shader
         self.mesh = Mesh(verts)
 
 
     def Draw(self):
         self.shader.Use()
+        self.transform.FindCurrentMatrix()
+        gl.glUniformMatrix4fv(gl.glGetUniformLocation(self.shader.program, "model"), 1, False, glm.value_ptr(self.transform.currentMatrix))
         self.mesh.Draw()
 
     
@@ -172,11 +210,25 @@ class Camera:
     right : glm.vec3
     up : glm.vec3
 
+    view : glm.mat4
     perspective : glm.mat4
 
     def __init__(self, pos : glm.vec3):
         self.pos = pos
         self.perspective = glm.perspective(glm.radians(45.0), scr_width / scr_height, 0.1, 100.0)
+        self.FindDirections()
+
+    def FindDirections(self):
+        self.forward = glm.normalize(-self.pos)
+        self.right = glm.normalize(glm.cross(self.forward, glm.vec3(0, 1, 0)))
+        self.up = glm.cross(self.forward, self.right)
+
+    def FindView(self):
+        #self.view = glm.lookAt(glm.vec3(self.pos.x, self.pos.y, -self.pos.z), glm.vec3(0), glm.vec3(0, 1, 0))
+        self.view = glm.mat4(self.right.x, self.up.x, -self.forward.x, 0, self.right.y, self.up.y, -self.forward.y, 0, self.right.z, self.up.z, -self.forward.z, 0, 0, 0, 0, 1) * glm.mat4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, -self.pos.x, 0, 0, 1)
+
+
+
 
 
 class PlayerStats:
@@ -203,7 +255,7 @@ class ShaderManager:
 
     def Update(self, player : Player):
         self.default_diffuse.Use()
-        gl.glUniform3f(gl.glGetUniformLocation(self.default_diffuse.program, "camPos"), player.cam.pos.x, player.cam.pos.y, player.cam.pos.z)
+        gl.glUniformMatrix4fv(gl.glGetUniformLocation(self.default_diffuse.program, "view"), 1, False, glm.value_ptr(player.cam.view))
         gl.glUniformMatrix4fv(gl.glGetUniformLocation(self.default_diffuse.program, "perspective"), 1, False, glm.value_ptr(player.cam.perspective))
 
 
@@ -226,12 +278,13 @@ layout (location = 1) in vec3 aCol;
 
 out vec3 vCol;
 
-uniform vec3 camPos;
 uniform mat4 perspective;
+uniform mat4 view;
+uniform mat4 model;
 
 void main()
 {
-    gl_Position = perspective * vec4(aPos - camPos, 1.0);
+    gl_Position = perspective * view * model * vec4(aPos, 1.0);
     vCol = aCol;
 }''' 
 
@@ -296,29 +349,35 @@ def ProcessInputs(deltaTime):
     global window
     global player
 
+    acceleration = glm.vec3(0)
+
     if glfw.get_key(window, glfw.KEY_A) == glfw.PRESS:
-        player.cam.pos.x -= deltaTime * player.stats.speed
+        acceleration.x -= 1
 
     if glfw.get_key(window, glfw.KEY_D) == glfw.PRESS:
-        player.cam.pos.x += deltaTime * player.stats.speed
+        acceleration.x += 1
 
     if glfw.get_key(window, glfw.KEY_S) == glfw.PRESS:
-        player.cam.pos.z += deltaTime * player.stats.speed
+        acceleration.z -= 1
 
     if glfw.get_key(window, glfw.KEY_W) == glfw.PRESS:
-        player.cam.pos.z -= deltaTime * player.stats.speed
+        acceleration.z += 1
 
     if glfw.get_key(window, glfw.KEY_Q) == glfw.PRESS:
-        player.cam.pos.y -= deltaTime * player.stats.speed
+        acceleration.y -= 1
 
     if glfw.get_key(window, glfw.KEY_E) == glfw.PRESS:
-        player.cam.pos.y += deltaTime * player.stats.speed
+        acceleration.y += 1
+
+    acceleration *= deltaTime * player.stats.speed
+
+    player.cam.pos += player.cam.right * acceleration.x + player.cam.up * acceleration.y + player.cam.forward * acceleration.z
 
 
 if (__name__ == '__main__'):
     CreateMainWindow() 
 
-    player = Player(glm.vec3(0, 0, -0.5))
+    player = Player(glm.vec3(0, 0, -5.0))
 
     shaderManager = ShaderManager()
     testObj = Object(squareVertsNoInd, shaderManager.default_diffuse)
@@ -329,9 +388,16 @@ if (__name__ == '__main__'):
         glfw.get_key(window, glfw.KEY_ESCAPE) != glfw.PRESS and 
         not glfw.window_should_close(window) 
     ): 
-        deltaTime = glfw.get_time() - lastTime
+        time = glfw.get_time()
+        deltaTime = time - lastTime
 
+        player.cam.FindDirections()
         ProcessInputs(deltaTime)
+        player.cam.FindView()
+
+        testObj.transform.position = glm.vec3(00, 0, 0)
+        testObj.transform.rotation = glm.vec3(0.1 * time, 0.2 * time, 0.3 * time)
+        testObj.transform.scale = glm.vec3(1.0 + 0.1 * time, 1.0 + 0.2 * time, 1.0 + 0.3 * time)
         
         print(str(player.cam.pos))
         shaderManager.Update(player)
