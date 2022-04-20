@@ -261,14 +261,41 @@ class Player:
 
 class ShaderManager:
     default_diffuse : Shader
+    voxel_diffuse : Shader
 
     def __init__(self):
         self.default_diffuse = Shader(vertShader, fragShader)
+        self.default_diffuse = Shader(voxelVertShader, fragShader)
 
     def Update(self, player : Player):
         self.default_diffuse.Use()
         gl.glUniformMatrix4fv(gl.glGetUniformLocation(self.default_diffuse.program, "view"), 1, False, glm.value_ptr(player.cam.view))
         gl.glUniformMatrix4fv(gl.glGetUniformLocation(self.default_diffuse.program, "perspective"), 1, False, glm.value_ptr(player.cam.perspective))
+
+
+
+class Voxel:
+    value : np.uint16
+
+    def __init__(self, value : np.uint16):
+        self.value = value
+
+
+class Chunk:
+    voxels : Voxel
+    pos : glm.vec3
+
+    def __init__(self, pos : glm.vec3):
+        self.voxels = [[[None] * 16], [[None] * 16], [[None] * 16]]
+        self.pos = pos
+
+
+class VoxelWorld:
+    chunks : Chunk
+
+    def __init__(self):
+        self.chunks = Chunk(glm.vec3(0, 0, 0))
+
 
 
 
@@ -300,6 +327,22 @@ void main()
     vCol = aCol;
 }''' 
 
+voxelVertShader = '''
+#version 330 core
+layout (location = 0) in vec3 aPos;
+layout (location = 1) in vec3 aCol;
+
+out vec3 vCol;
+
+uniform mat4 perspective;
+uniform mat4 view;
+
+void main()
+{
+    gl_Position = perspective * view * vec4(aPos, 1.0);
+    vCol = aCol;
+}''' 
+
  
  
 
@@ -315,6 +358,15 @@ void main()
 }'''
 
 
+
+global player
+player : Player
+global shaderManager
+shaderManager : ShaderManager
+global testObj
+testObj : Object
+global world
+world : VoxelWorld
 
 
 
@@ -351,7 +403,7 @@ def MouseCallback(window, xPos, yPos):
 
 
 
-def CreateMainWindow():
+def Start():
     global window
     global scr_width 
     global scr_height
@@ -389,10 +441,45 @@ def CreateMainWindow():
     gl.glClearColor(0, 0, 0.4, 0)
 
 
+    global world
+    world = VoxelWorld()
 
-global player
-global shaderManager
-global testObj
+
+global lastTime
+def Update():
+    global lastTime
+    global player
+    global testObj
+    global shaderManager
+
+    time = glfw.get_time()
+    deltaTime = time - lastTime
+
+    player.cam.FindAllDirections()
+
+    ProcessInputs(deltaTime)
+
+    player.cam.FindView()
+
+
+    testObj.transform.rotation = glm.vec3(0.1 * time, 0.2 * time, 0.3 * time)
+    #testObj.transform.scale = glm.vec3(1.0 + 0.1 * time, 1.0 + 0.2 * time, 1.0 + 0.3 * time)
+        
+    print(str(player.cam.pos))
+    shaderManager.Update(player)
+
+    gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
+    # Draw the triangle 
+    testObj.Draw()
+
+    glfw.swap_buffers(window) 
+
+    glfw.poll_events()
+
+    lastTime = glfw.get_time()
+
+
+
 
  
 def ProcessInputs(deltaTime):
@@ -425,7 +512,7 @@ def ProcessInputs(deltaTime):
 
 
 if (__name__ == '__main__'):
-    CreateMainWindow() 
+    Start() 
 
     player = Player(glm.vec3(0, 0, -5.0))
 
@@ -437,33 +524,8 @@ if (__name__ == '__main__'):
     while(
         glfw.get_key(window, glfw.KEY_ESCAPE) != glfw.PRESS and 
         not glfw.window_should_close(window) 
-    ): 
-        time = glfw.get_time()
-        deltaTime = time - lastTime
-
-        player.cam.FindAllDirections()
-
-        ProcessInputs(deltaTime)
-
-        player.cam.FindView()
-
-
-        testObj.transform.position = glm.vec3(00, 0, 0)
-        testObj.transform.rotation = glm.vec3(0.1 * time, 0.2 * time, 0.3 * time)
-        testObj.transform.scale = glm.vec3(1.0 + 0.1 * time, 1.0 + 0.2 * time, 1.0 + 0.3 * time)
-        
-        print(str(player.cam.pos))
-        shaderManager.Update(player)
-
-        gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
-        # Draw the triangle 
-        testObj.Draw()
-
-        glfw.swap_buffers(window) 
-
-        glfw.poll_events()
-
-        lastTime = glfw.get_time()
+    ):
+        Update()
 
     
     testObj.Destroy()
