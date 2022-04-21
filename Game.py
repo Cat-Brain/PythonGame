@@ -285,16 +285,29 @@ class Chunk:
     voxels : Voxel
     pos : glm.vec3
 
+    mesh : Mesh
+
     def __init__(self, pos : glm.vec3):
         self.voxels = [[[None] * 16], [[None] * 16], [[None] * 16]]
         self.pos = pos
+        self.mesh.CreateChunkMesh()
+
+    def CreateChunkMesh(self):
+        self.mesh.Create()
 
 
 class VoxelWorld:
     chunks : Chunk
 
     def __init__(self):
-        self.chunks = Chunk(glm.vec3(0, 0, 0))
+        self.chunks = []
+        self.chunks.append(Chunk(glm.vec3(0, 0, 0)))
+        
+    def Draw(self, shader : Shader):
+        shader.Use()
+
+        for chunk in self.chunks:
+            chunk.mesh.Draw()
 
 
 
