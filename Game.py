@@ -1,5 +1,6 @@
 from cmath import log
 import contextlib, ctypes, logging, math, sys
+from lib2to3.pygram import python_grammar_no_print_statement
 from tkinter import Scale
 from turtle import pos
 from OpenGL import GL as gl
@@ -7,6 +8,7 @@ import glfw
 from ctypes import c_void_p
 import numpy as np
 import glm as glm
+import pyfastnoisesimd as fns
 
 scr_width = 500
 scr_height = 400
@@ -235,7 +237,6 @@ class Camera:
         self.up = glm.cross(self.forward, self.right)
 
     def FindView(self):
-        #self.view = glm.lookAt(glm.vec3(self.pos.x, self.pos.y, -self.pos.z), glm.vec3(0), glm.vec3(0, 1, 0))
         self.view = glm.mat4(self.right.x, self.up.x, -self.forward.x, 0, self.right.y, self.up.y, -self.forward.y, 0, self.right.z, self.up.z, -self.forward.z, 0, 0, 0, 0, 1) * glm.mat4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, -self.pos.x, -self.pos.y, -self.pos.z, 1)
 
     def FindPerspective(self):
@@ -285,23 +286,40 @@ class Chunk:
     voxels : Voxel
     pos : glm.vec3
 
+    verts : float
     mesh : Mesh
 
-    def __init__(self, pos : glm.vec3):
-        self.voxels = [[[None] * 16], [[None] * 16], [[None] * 16]]
+    def __init__(self, pos : glm.vec3, noise : fns.Noise):
+        self.voxels = [17 * [17 * [17 * [None]]]]
         self.pos = pos
-        self.mesh.CreateChunkMesh()
+        self.GenerateVoxels(noise)
+        self.GenerateChunkMesh()
 
-    def CreateChunkMesh(self):
-        self.mesh.Create()
+
+    def GenerateVoxels(self, noise):
+        for x in range(16):
+            for y in range(16):
+                for z in range(16):
+                    print("(" + str(x) + ", " + str(y) + ", " + str(z) + ")")
+                    if (x + self.pos.x) % 16 < y + self.pos.y:
+                        self.voxels[x][y][z] = 1.0
+                    else:
+                        self.voxels[x][y][z] = 0.0
+
+    def GenerateChunkMesh(self):
+        self.verts = (-0.5, -0.5, 0.0, 0.0, 0.0, 0.5,
+            0.0, 0.5, 0.0, 0.5, 1.0, 0.5,
+            0.5, -0.5, 0.0, 1.0, 0.0, 0.5)
+
+        self.mesh = Mesh(self.verts)
 
 
 class VoxelWorld:
     chunks : Chunk
 
-    def __init__(self):
+    def __init__(self, noise : fns.Noise):
         self.chunks = []
-        self.chunks.append(Chunk(glm.vec3(0, 0, 0)))
+        self.chunks.append(Chunk(glm.vec3(0, 0, 0), noise))
         
     def Draw(self, shader : Shader):
         shader.Use()
@@ -329,6 +347,7 @@ layout (location = 0) in vec3 aPos;
 layout (location = 1) in vec3 aCol;
 
 out vec3 vCol;
+out vec4 vPos;
 
 uniform mat4 perspective;
 uniform mat4 view;
@@ -336,7 +355,8 @@ uniform mat4 model;
 
 void main()
 {
-    gl_Position = perspective * view * model * vec4(aPos, 1.0);
+    vPos = model * vec4(-aPos.x, -aPos.y, aPos.z, 1.0);
+    gl_Position = perspective * view * vPos;
     vCol = aCol;
 }''' 
 
@@ -346,13 +366,15 @@ layout (location = 0) in vec3 aPos;
 layout (location = 1) in vec3 aCol;
 
 out vec3 vCol;
+out vec4 vPos;
 
 uniform mat4 perspective;
 uniform mat4 view;
 
 void main()
 {
-    gl_Position = perspective * view * vec4(aPos, 1.0);
+    vPos = vec4(-aPos.x, -aPos.y, aPos.z, 1.0);
+    gl_Position = perspective * view * vPos;
     vCol = aCol;
 }''' 
 
@@ -380,6 +402,8 @@ global testObj
 testObj : Object
 global world
 world : VoxelWorld
+global perlinNoise
+perlinNoise : fns.Noise
 
 
 
@@ -397,10 +421,18 @@ def FramebufferSizeCallback(window, width, height):
 
 lastMouseX = scr_width / 2
 lastMouseY = scr_height / 2
+firstMouse = True
 def MouseCallback(window, xPos, yPos):
     global lastMouseX
     global lastMouseY
+    global firstMouse
     global player
+
+    if firstMouse: # initially set to true
+        lastMouseX = xPos
+        lastMouseY = yPos
+        firstMouse = False
+
 
     xOffset = (xPos - lastMouseX) * player.cam.sensitivity
     yOffset = (yPos - lastMouseY) * player.cam.sensitivity
@@ -420,6 +452,7 @@ def Start():
     global window
     global scr_width 
     global scr_height
+    global perlinNoise
 
  
     if not glfw.init():
@@ -454,8 +487,11 @@ def Start():
     gl.glClearColor(0, 0, 0.4, 0)
 
 
+    perlinNoise = fns.Noise()
+
+
     global world
-    world = VoxelWorld()
+    world = VoxelWorld(perlinNoise)
 
 
 global lastTime
@@ -483,7 +519,9 @@ def Update():
 
     gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
     # Draw the triangle 
-    testObj.Draw()
+    #testObj.Draw()
+    global world
+    world.Draw(shaderManager.default_diffuse)
 
     glfw.swap_buffers(window) 
 
