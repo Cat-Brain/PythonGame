@@ -8,7 +8,6 @@ import glfw
 from ctypes import c_void_p
 import numpy as np
 import glm as glm
-import pyfastnoisesimd as fns
 
 scr_width = 500
 scr_height = 400
@@ -82,14 +81,17 @@ class Mesh:
         gl.glBufferData(gl.GL_ARRAY_BUFFER, self.vertCount * ctypes.sizeof(ctypes.c_float), array_type(*verts), gl.GL_STATIC_DRAW)
         
         gl.glEnableVertexAttribArray(0)
-        gl.glVertexAttribPointer(0, 3, gl.GL_FLOAT, False, 6 * ctypes.sizeof(ctypes.c_float), None)
+        gl.glVertexAttribPointer(0, 3, gl.GL_FLOAT, False, 9 * ctypes.sizeof(ctypes.c_float), None)
 
         gl.glEnableVertexAttribArray(1)
-        gl.glVertexAttribPointer(1, 3, gl.GL_FLOAT, False, 6 * ctypes.sizeof(ctypes.c_float),  ctypes.c_void_p(ctypes.sizeof(ctypes.c_float) * 3))
+        gl.glVertexAttribPointer(1, 3, gl.GL_FLOAT, False, 9 * ctypes.sizeof(ctypes.c_float), ctypes.c_void_p(ctypes.sizeof(ctypes.c_float) * 3))
 
+        gl.glEnableVertexAttribArray(2)
+        gl.glVertexAttribPointer(2, 3, gl.GL_FLOAT, False, 9 * ctypes.sizeof(ctypes.c_float), ctypes.c_void_p(ctypes.sizeof(ctypes.c_float) * 6))
+        
     def Draw(self):
         gl.glBindVertexArray(self.vao)
-        gl.glDrawArrays(gl.GL_TRIANGLES, 0, self.vertCount)
+        gl.glDrawArrays(gl.GL_TRIANGLES, 0, int(self.vertCount / 9))
 
     def Destroy(self):
         gl.glDeleteVertexArrays(1, [self.vao])
@@ -266,12 +268,18 @@ class ShaderManager:
 
     def __init__(self):
         self.default_diffuse = Shader(vertShader, fragShader)
-        self.default_diffuse = Shader(voxelVertShader, fragShader)
+        self.voxel_diffuse = Shader(voxelVertShader, fragShader)
 
     def Update(self, player : Player):
         self.default_diffuse.Use()
         gl.glUniformMatrix4fv(gl.glGetUniformLocation(self.default_diffuse.program, "view"), 1, False, glm.value_ptr(player.cam.view))
         gl.glUniformMatrix4fv(gl.glGetUniformLocation(self.default_diffuse.program, "perspective"), 1, False, glm.value_ptr(player.cam.perspective))
+        gl.glUniform3fv(gl.glGetUniformLocation(self.default_diffuse.program, "lightPos"), player.cam.pos.x, player.cam.pos.y, player.cam.pos.z)
+        gl.glUniform3fv(gl.glGetUniformLocation(self.default_diffuse.program, "lightCol"), 0.8, 0.5, 1.0)
+        
+        self.voxel_diffuse.Use()
+        gl.glUniformMatrix4fv(gl.glGetUniformLocation(self.voxel_diffuse.program, "view"), 1, False, glm.value_ptr(player.cam.view))
+        gl.glUniformMatrix4fv(gl.glGetUniformLocation(self.voxel_diffuse.program, "perspective"), 1, False, glm.value_ptr(player.cam.perspective))
 
 
 
@@ -289,27 +297,35 @@ class Chunk:
     verts : float
     mesh : Mesh
 
-    def __init__(self, pos : glm.vec3, noise : fns.Noise):
-        self.voxels = [17 * [17 * [17 * [None]]]]
+    def __init__(self, pos : glm.vec3, noise):
         self.pos = pos
+        self.voxels = 17 * [17 * [17 * [None]]]
         self.GenerateVoxels(noise)
         self.GenerateChunkMesh()
 
 
     def GenerateVoxels(self, noise):
-        for x in range(16):
-            for y in range(16):
-                for z in range(16):
-                    print("(" + str(x) + ", " + str(y) + ", " + str(z) + ")")
-                    if (x + self.pos.x) % 16 < y + self.pos.y:
-                        self.voxels[x][y][z] = 1.0
-                    else:
-                        self.voxels[x][y][z] = 0.0
+        for x in range(17):
+            for y in range(17):
+                for z in range(17):
+                    print("(" + str(x) + ", " + str(y) + ", " + str(z))
+                    
+                    self.voxels[x][y][z] = (((x + self.pos.x) / 2 + (y + self.pos.y) / 2 + (z + self.pos.z) / 2) % 2) * 2
+                        
+        print(self.voxels)
+                    
 
     def GenerateChunkMesh(self):
         self.verts = (-0.5, -0.5, 0.0, 0.0, 0.0, 0.5,
             0.0, 0.5, 0.0, 0.5, 1.0, 0.5,
             0.5, -0.5, 0.0, 1.0, 0.0, 0.5)
+
+        
+        # for x in range(16):
+        #     for y in range(16):
+        #         for z in range(16):
+        #             if self.voxels[x][y][z] != self.voxels[x][y][z]:
+        #                 GenerateHorizontalQuad
 
         self.mesh = Mesh(self.verts)
 
@@ -317,7 +333,7 @@ class Chunk:
 class VoxelWorld:
     chunks : Chunk
 
-    def __init__(self, noise : fns.Noise):
+    def __init__(self, noise):
         self.chunks = []
         self.chunks.append(Chunk(glm.vec3(0, 0, 0), noise))
         
@@ -325,19 +341,20 @@ class VoxelWorld:
         shader.Use()
 
         for chunk in self.chunks:
+            chunk : Chunk
             chunk.mesh.Draw()
 
 
 
 
 squareVertsNoInd = (
-    -0.5,-0.5, 0.0, 0.0, 0.0, 0.5,
-    -0.5, 0.5, 0.0, 0.0, 1.0, 0.5,
-     0.5, 0.5, 0.0, 1.0, 1.0, 0.5,
+    -0.5,-0.5, 0.0, 0.0, 0.0, 0.5, 0.0, 0.0, 1.0,
+    -0.5, 0.5, 0.0, 0.0, 1.0, 0.5, 0.0, 0.0, 1.0,
+     0.5, 0.5, 0.0, 1.0, 1.0, 0.5, 0.0, 0.0, 1.0,
 
-    -0.5,-0.5, 0.0, 0.0, 0.0, 0.5,
-     0.5, 0.5, 0.0, 1.0, 1.0, 0.5,
-     0.5,-0.5, 0.0, 1.0, 0.0, 0.5
+    -0.5,-0.5, 0.0, 0.0, 0.0, 0.5, 0.0, 0.0, 1.0,
+     0.5, 0.5, 0.0, 1.0, 1.0, 0.5, 0.0, 0.0, 1.0,
+     0.5,-0.5, 0.0, 1.0, 0.0, 0.5, 0.0, 0.0, 1.0
 )
 
 
@@ -345,9 +362,11 @@ vertShader = '''
 #version 330 core
 layout (location = 0) in vec3 aPos;
 layout (location = 1) in vec3 aCol;
+layout (location = 2) in vec3 aNorm;
 
+out vec3 vPos;
 out vec3 vCol;
-out vec4 vPos;
+out vec3 vNorm;
 
 uniform mat4 perspective;
 uniform mat4 view;
@@ -355,27 +374,33 @@ uniform mat4 model;
 
 void main()
 {
-    vPos = model * vec4(-aPos.x, -aPos.y, aPos.z, 1.0);
-    gl_Position = perspective * view * vPos;
+    vec4 v4VPos = model * vec4(-aPos.x, -aPos.y, aPos.z, 1.0);
+    vPos = v4VPos.xyz;
+    gl_Position = perspective * view * v4vPos;
     vCol = aCol;
+    vNorm = aNorm;
 }''' 
 
 voxelVertShader = '''
 #version 330 core
 layout (location = 0) in vec3 aPos;
 layout (location = 1) in vec3 aCol;
+layout (location = 2) in vec3 aNorm;
 
+out vec3 vPos;
 out vec3 vCol;
-out vec4 vPos;
+out vec3 vNorm;
 
 uniform mat4 perspective;
 uniform mat4 view;
 
 void main()
 {
-    vPos = vec4(-aPos.x, -aPos.y, aPos.z, 1.0);
-    gl_Position = perspective * view * vPos;
+    vec4 v4VPos = vec4(-aPos.x, -aPos.y, aPos.z, 1.0);
+    vPos = v4VPos.xyz;
+    gl_Position = perspective * view * v4VPos;
     vCol = aCol;
+    vNorm = aNorm;
 }''' 
 
  
@@ -385,11 +410,18 @@ fragShader = '''
 #version 330 core
 out vec4 FragColor;
 
+in vec3 vPos;
 in vec3 vCol;
+in vec3 vNorm;
+
+uniform vec3 lightPos;
+uniform vec3 lightCol;
 
 void main()
 {
-    FragColor = vec4(vCol, 1.0f);
+    vec3 lightDir = normalize(lightPos - vPos);  
+    vec3 diff = max(dot(vNorm, lightDir), 0.0) * lightCol;
+    FragColor = vec4((diff) * vCol, 1.0f);
 }'''
 
 
@@ -403,19 +435,17 @@ testObj : Object
 global world
 world : VoxelWorld
 global perlinNoise
-perlinNoise : fns.Noise
+perlinNoise : int
 
 
 
 def FramebufferSizeCallback(window, width, height):
     gl.glViewport(0, 0, width, height)
-    global scr_width
-    global scr_height
+    global scr_width, scr_height, player
 
     scr_width = width
     scr_height = height
 
-    global player
     player.cam.FindPerspective()
 
 
@@ -423,10 +453,7 @@ lastMouseX = scr_width / 2
 lastMouseY = scr_height / 2
 firstMouse = True
 def MouseCallback(window, xPos, yPos):
-    global lastMouseX
-    global lastMouseY
-    global firstMouse
-    global player
+    global lastMouseX, lastMouseY, firstMouse, player
 
     if firstMouse: # initially set to true
         lastMouseX = xPos
@@ -449,10 +476,7 @@ def MouseCallback(window, xPos, yPos):
 
 
 def Start():
-    global window
-    global scr_width 
-    global scr_height
-    global perlinNoise
+    global window, scr_width, scr_height, perlinNoise, world
 
  
     if not glfw.init():
@@ -475,6 +499,8 @@ def Start():
         print('failed to open GLFW window.')
         sys.exit(2) 
     glfw.make_context_current(window) 
+    
+    gl.glEnable(gl.GL_DEPTH_TEST);
 
     glfw.set_window_size_callback(window, FramebufferSizeCallback)
     glfw.set_cursor_pos_callback(window, MouseCallback)
@@ -487,10 +513,9 @@ def Start():
     gl.glClearColor(0, 0, 0.4, 0)
 
 
-    perlinNoise = fns.Noise()
+    perlinNoise = 1
+    
 
-
-    global world
     world = VoxelWorld(perlinNoise)
 
 
@@ -519,9 +544,9 @@ def Update():
 
     gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
     # Draw the triangle 
-    #testObj.Draw()
+    testObj.Draw()
     global world
-    world.Draw(shaderManager.default_diffuse)
+    world.Draw(shaderManager.voxel_diffuse)
 
     glfw.swap_buffers(window) 
 
