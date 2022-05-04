@@ -294,6 +294,7 @@ class Voxel:
 class Chunk:
     voxels : Voxel
     pos : glm.vec3
+    nextQuad : float
 
     verts : float
     mesh : Mesh
@@ -301,6 +302,8 @@ class Chunk:
     def __init__(self, pos : glm.vec3, noise):
         self.pos = pos
         self.voxels = 17 * [17 * [17 * [None]]]
+        self.verts = []
+        self.nextQuad = [0.0] * 54
         self.GenerateVoxels(noise)
         self.GenerateChunkMesh()
 
@@ -316,27 +319,222 @@ class Chunk:
         print(self.voxels)
                     
                     
-    def GenerateXQuad(self):
+    def GenerateXQuad(self, x : int, y : int, z : int):
+        dir : float
+        dir = self.voxels[x][y][z] - self.voxels[x + 1][y][z]
+        
+        
+        self.nextQuad[0] = x + 1
+        self.nextQuad[1] = y
+        self.nextQuad[2] = z
+        self.nextQuad[3] = 1.0
+        self.nextQuad[4] = 1.0
+        self.nextQuad[5] = 1.0
+        self.nextQuad[6] = dir
+        self.nextQuad[7] = 0.0
+        self.nextQuad[8] = 0.0
+        
+        self.nextQuad[9] = x + 1
+        self.nextQuad[10] = y + 1
+        self.nextQuad[11] = z
+        self.nextQuad[12] = 1.0
+        self.nextQuad[13] = 1.0
+        self.nextQuad[14] = 1.0
+        self.nextQuad[15] = dir
+        self.nextQuad[16] = 0.0
+        self.nextQuad[17] = 0.0
+        
+        self.nextQuad[18] = x + 1
+        self.nextQuad[19] = y + 1
+        self.nextQuad[20] = z + 1
+        self.nextQuad[21] = 1.0
+        self.nextQuad[22] = 1.0
+        self.nextQuad[23] = 1.0
+        self.nextQuad[24] = dir
+        self.nextQuad[25] = 0.0
+        self.nextQuad[26] = 0.0
+        
+        self.nextQuad[27] = x + 1
+        self.nextQuad[28] = y
+        self.nextQuad[29] = z
+        self.nextQuad[30] = 1.0
+        self.nextQuad[31] = 1.0
+        self.nextQuad[32] = 1.0
+        self.nextQuad[33] = dir
+        self.nextQuad[34] = 0.0
+        self.nextQuad[35] = 0.0
+        
+        self.nextQuad[36] = x + 1
+        self.nextQuad[37] = y + 1
+        self.nextQuad[38] = z + 1
+        self.nextQuad[39] = 1.0
+        self.nextQuad[40] = 1.0
+        self.nextQuad[41] = 1.0
+        self.nextQuad[42] = dir
+        self.nextQuad[43] = 0.0
+        self.nextQuad[44] = 0.0
+        
+        self.nextQuad[45] = x + 1
+        self.nextQuad[46] = y
+        self.nextQuad[47] = z + 1
+        self.nextQuad[48] = 1.0
+        self.nextQuad[49] = 1.0
+        self.nextQuad[50] = 1.0
+        self.nextQuad[51] = dir
+        self.nextQuad[52] = 0.0
+        self.nextQuad[53] = 0.0
+        
+        
+        self.verts.extend(self.nextQuad)
                     
-    def GenerateYQuad(self):
+    def GenerateYQuad(self, x : int, y : int, z : int):
+        dir : float
+        dir = self.voxels[x][y][z] - self.voxels[x + 1][y][z]
+        
+        
+        self.nextQuad[0] = x
+        self.nextQuad[1] = y + 1
+        self.nextQuad[2] = z
+        self.nextQuad[3] = 1.0
+        self.nextQuad[4] = 1.0
+        self.nextQuad[5] = 1.0
+        self.nextQuad[6] = dir
+        self.nextQuad[7] = 0.0
+        self.nextQuad[8] = 0.0
+        
+        self.nextQuad[9] = x
+        self.nextQuad[10] = y + 1
+        self.nextQuad[11] = z + 1
+        self.nextQuad[12] = 1.0
+        self.nextQuad[13] = 1.0
+        self.nextQuad[14] = 1.0
+        self.nextQuad[15] = dir
+        self.nextQuad[16] = 0.0
+        self.nextQuad[17] = 0.0
+        
+        self.nextQuad[18] = x + 1
+        self.nextQuad[19] = y + 1
+        self.nextQuad[20] = z + 1
+        self.nextQuad[21] = 1.0
+        self.nextQuad[22] = 1.0
+        self.nextQuad[23] = 1.0
+        self.nextQuad[24] = dir
+        self.nextQuad[25] = 0.0
+        self.nextQuad[26] = 0.0
+        
+        self.nextQuad[27] = x
+        self.nextQuad[28] = y + 1
+        self.nextQuad[29] = z
+        self.nextQuad[30] = 1.0
+        self.nextQuad[31] = 1.0
+        self.nextQuad[32] = 1.0
+        self.nextQuad[33] = dir
+        self.nextQuad[34] = 0.0
+        self.nextQuad[35] = 0.0
+        
+        self.nextQuad[36] = x + 1
+        self.nextQuad[37] = y + 1
+        self.nextQuad[38] = z + 1
+        self.nextQuad[39] = 1.0
+        self.nextQuad[40] = 1.0
+        self.nextQuad[41] = 1.0
+        self.nextQuad[42] = dir
+        self.nextQuad[43] = 0.0
+        self.nextQuad[44] = 0.0
+        
+        self.nextQuad[45] = x + 1
+        self.nextQuad[46] = y + 1
+        self.nextQuad[47] = z
+        self.nextQuad[48] = 1.0
+        self.nextQuad[49] = 1.0
+        self.nextQuad[50] = 1.0
+        self.nextQuad[51] = dir
+        self.nextQuad[52] = 0.0
+        self.nextQuad[53] = 0.0
+        
+        
+        self.verts.extend(self.nextQuad)
                     
-    def GenerateZQuad(self):
+    def GenerateZQuad(self, x : int, y : int, z : int):
+        dir : float
+        dir = self.voxels[x][y][z] - self.voxels[x + 1][y][z]
+        
+        
+        self.nextQuad[0] = x
+        self.nextQuad[1] = y
+        self.nextQuad[2] = z + 1
+        self.nextQuad[3] = 1.0
+        self.nextQuad[4] = 1.0
+        self.nextQuad[5] = 1.0
+        self.nextQuad[6] = dir
+        self.nextQuad[7] = 0.0
+        self.nextQuad[8] = 0.0
+        
+        self.nextQuad[9] = x
+        self.nextQuad[10] = y + 1
+        self.nextQuad[11] = z + 1
+        self.nextQuad[12] = 1.0
+        self.nextQuad[13] = 1.0
+        self.nextQuad[14] = 1.0
+        self.nextQuad[15] = dir
+        self.nextQuad[16] = 0.0
+        self.nextQuad[17] = 0.0
+        
+        self.nextQuad[18] = x + 1
+        self.nextQuad[19] = y + 1
+        self.nextQuad[20] = z + 1
+        self.nextQuad[21] = 1.0
+        self.nextQuad[22] = 1.0
+        self.nextQuad[23] = 1.0
+        self.nextQuad[24] = dir
+        self.nextQuad[25] = 0.0
+        self.nextQuad[26] = 0.0
+        
+        self.nextQuad[27] = x
+        self.nextQuad[28] = y
+        self.nextQuad[29] = z + 1
+        self.nextQuad[30] = 1.0
+        self.nextQuad[31] = 1.0
+        self.nextQuad[32] = 1.0
+        self.nextQuad[33] = dir
+        self.nextQuad[34] = 0.0
+        self.nextQuad[35] = 0.0
+        
+        self.nextQuad[36] = x + 1
+        self.nextQuad[37] = y + 1
+        self.nextQuad[38] = z + 1
+        self.nextQuad[39] = 1.0
+        self.nextQuad[40] = 1.0
+        self.nextQuad[41] = 1.0
+        self.nextQuad[42] = dir
+        self.nextQuad[43] = 0.0
+        self.nextQuad[44] = 0.0
+        
+        self.nextQuad[45] = x + 1
+        self.nextQuad[46] = y
+        self.nextQuad[47] = z + 1
+        self.nextQuad[48] = 1.0
+        self.nextQuad[49] = 1.0
+        self.nextQuad[50] = 1.0
+        self.nextQuad[51] = dir
+        self.nextQuad[52] = 0.0
+        self.nextQuad[53] = 0.0
+        
+        
+        self.verts.extend(self.nextQuad)
 
     def GenerateChunkMesh(self):
-        self.verts = (-0.5, -0.5, 0.0, 0.0, 0.0, 0.5, 0.0, 0.0, 1.0,
-            0.0, 0.5, 0.0, 0.5, 1.0, 0.5, 0.0, 0.0, 1.0,
-            0.5, -0.5, 0.0, 1.0, 0.0, 0.5, 0.0, 0.0, 1.0)
 
         
         for x in range(16):
             for y in range(16):
                 for z in range(16):
                     if self.voxels[x][y][z] != self.voxels[x + 1][y][z]:
-                        self.GenerateXQuad()
+                        self.GenerateXQuad(x, y, z)
                     if self.voxels[x][y][z] != self.voxels[x][y + 1][z]:
-                        self.GenerateYQuad
+                        self.GenerateYQuad(x, y, z)
                     if self.voxels[x][y][z] != self.voxels[x][y][z + 1]:
-                        self.GenerateZQuad
+                        self.GenerateZQuad(x, y, z)
 
         self.mesh = Mesh(self.verts)
 
@@ -386,7 +584,7 @@ uniform mat4 model;
 void main()
 {
     vPos = mat3(model) * aPos;
-    gl_Position = perspective * view * model * vec4(-aPos.x, -aPos.y, aPos.z, 1.0);
+    gl_Position = perspective * view * model * vec4(aPos.x, aPos.y, aPos.z, 1.0);
     vCol = aCol;
     vNorm = aNorm;
 }''' 
@@ -406,7 +604,7 @@ uniform mat4 view;
 
 void main()
 {
-    vec4 v4VPos = vec4(-aPos.x, -aPos.y, aPos.z, 1.0);
+    vec4 v4VPos = vec4(aPos.x, aPos.y, aPos.z, 1.0);
     vPos = aPos;
     gl_Position = perspective * view * v4VPos;
     vCol = aCol;
