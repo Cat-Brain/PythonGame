@@ -229,14 +229,13 @@ class Camera:
         self.forward.y = np.sin(glm.radians(self.pitch))
         self.forward.z = np.sin(glm.radians(self.yaw)) * cosOfPitch
 
-    def FindAllDirections(self):
-        self.FindForward()
-        self.right = glm.normalize(glm.cross(self.forward, glm.vec3(0, 1, 0)))
+    def FindDirections(self):
+        self.right = glm.normalize(glm.cross(glm.vec3(0, 1, 0), self.forward))
         self.up = glm.cross(self.forward, self.right)
 
-    def FindDirections(self):
-        self.right = glm.normalize(glm.cross(self.forward, glm.vec3(0, 1, 0)))
-        self.up = glm.cross(self.forward, self.right)
+    def FindAllDirections(self):
+        self.FindForward()
+        self.FindDirections()
 
     def FindView(self):
         self.view = glm.mat4(self.right.x, self.up.x, -self.forward.x, 0, self.right.y, self.up.y, -self.forward.y, 0, self.right.z, self.up.z, -self.forward.z, 0, 0, 0, 0, 1) * glm.mat4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, -self.pos.x, -self.pos.y, -self.pos.z, 1)
@@ -274,13 +273,15 @@ class ShaderManager:
         self.default_diffuse.Use()
         gl.glUniformMatrix4fv(gl.glGetUniformLocation(self.default_diffuse.program, "view"), 1, False, glm.value_ptr(player.cam.view))
         gl.glUniformMatrix4fv(gl.glGetUniformLocation(self.default_diffuse.program, "perspective"), 1, False, glm.value_ptr(player.cam.perspective))
-        gl.glUniform3fv(gl.glGetUniformLocation(self.default_diffuse.program, "lightPos"), player.cam.pos.x, player.cam.pos.y, player.cam.pos.z)
-        gl.glUniform3fv(gl.glGetUniformLocation(self.default_diffuse.program, "lightCol"), 0.8, 0.5, 1.0)
+        gl.glUniform3f(gl.glGetUniformLocation(self.default_diffuse.program, "lightPos"), player.cam.pos.x, player.cam.pos.y, player.cam.pos.z)
+        gl.glUniform3f(gl.glGetUniformLocation(self.default_diffuse.program, "lightCol"), 0.8, 0.5, 1.0)
         
         self.voxel_diffuse.Use()
         gl.glUniformMatrix4fv(gl.glGetUniformLocation(self.voxel_diffuse.program, "view"), 1, False, glm.value_ptr(player.cam.view))
         gl.glUniformMatrix4fv(gl.glGetUniformLocation(self.voxel_diffuse.program, "perspective"), 1, False, glm.value_ptr(player.cam.perspective))
-
+        gl.glUniform3f(gl.glGetUniformLocation(self.voxel_diffuse.program, "lightPos"), player.cam.pos.x, player.cam.pos.y, player.cam.pos.z)
+        gl.glUniform3f(gl.glGetUniformLocation(self.voxel_diffuse.program, "lightCol"), 0.8, 0.5, 1.0)
+        
 
 
 class Voxel:
@@ -314,18 +315,28 @@ class Chunk:
                         
         print(self.voxels)
                     
+                    
+    def GenerateXQuad(self):
+                    
+    def GenerateYQuad(self):
+                    
+    def GenerateZQuad(self):
 
     def GenerateChunkMesh(self):
-        self.verts = (-0.5, -0.5, 0.0, 0.0, 0.0, 0.5,
-            0.0, 0.5, 0.0, 0.5, 1.0, 0.5,
-            0.5, -0.5, 0.0, 1.0, 0.0, 0.5)
+        self.verts = (-0.5, -0.5, 0.0, 0.0, 0.0, 0.5, 0.0, 0.0, 1.0,
+            0.0, 0.5, 0.0, 0.5, 1.0, 0.5, 0.0, 0.0, 1.0,
+            0.5, -0.5, 0.0, 1.0, 0.0, 0.5, 0.0, 0.0, 1.0)
 
         
-        # for x in range(16):
-        #     for y in range(16):
-        #         for z in range(16):
-        #             if self.voxels[x][y][z] != self.voxels[x][y][z]:
-        #                 GenerateHorizontalQuad
+        for x in range(16):
+            for y in range(16):
+                for z in range(16):
+                    if self.voxels[x][y][z] != self.voxels[x + 1][y][z]:
+                        self.GenerateXQuad()
+                    if self.voxels[x][y][z] != self.voxels[x][y + 1][z]:
+                        self.GenerateYQuad
+                    if self.voxels[x][y][z] != self.voxels[x][y][z + 1]:
+                        self.GenerateZQuad
 
         self.mesh = Mesh(self.verts)
 
@@ -374,9 +385,8 @@ uniform mat4 model;
 
 void main()
 {
-    vec4 v4VPos = model * vec4(-aPos.x, -aPos.y, aPos.z, 1.0);
-    vPos = v4VPos.xyz;
-    gl_Position = perspective * view * v4vPos;
+    vPos = mat3(model) * aPos;
+    gl_Position = perspective * view * model * vec4(-aPos.x, -aPos.y, aPos.z, 1.0);
     vCol = aCol;
     vNorm = aNorm;
 }''' 
@@ -397,7 +407,7 @@ uniform mat4 view;
 void main()
 {
     vec4 v4VPos = vec4(-aPos.x, -aPos.y, aPos.z, 1.0);
-    vPos = v4VPos.xyz;
+    vPos = aPos;
     gl_Position = perspective * view * v4VPos;
     vCol = aCol;
     vNorm = aNorm;
@@ -419,7 +429,7 @@ uniform vec3 lightCol;
 
 void main()
 {
-    vec3 lightDir = normalize(lightPos - vPos);  
+    vec3 lightDir = normalize(lightPos - vPos);
     vec3 diff = max(dot(vNorm, lightDir), 0.0) * lightCol;
     FragColor = vec4((diff) * vCol, 1.0f);
 }'''
@@ -461,11 +471,15 @@ def MouseCallback(window, xPos, yPos):
         firstMouse = False
 
 
-    xOffset = (xPos - lastMouseX) * player.cam.sensitivity
-    yOffset = (yPos - lastMouseY) * player.cam.sensitivity
+    xOffset = (lastMouseX - xPos) * player.cam.sensitivity
+    yOffset = (lastMouseY - yPos) * player.cam.sensitivity
 
     player.cam.yaw += xOffset
     player.cam.pitch += yOffset
+    
+    player.cam.yaw += 180.0
+    player.cam.yaw %= 360.0
+    player.cam.yaw -= 180.0
 
     player.cam.pitch = np.minimum(89.9, np.maximum(-89.9, player.cam.pitch))
 
@@ -584,6 +598,7 @@ def ProcessInputs(deltaTime):
 
     acceleration *= deltaTime * player.stats.speed
 
+    print(player.cam.forward)
     player.cam.pos += player.cam.right * acceleration.x + player.cam.up * acceleration.y + player.cam.forward * acceleration.z
 
 
