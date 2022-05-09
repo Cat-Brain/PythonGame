@@ -251,7 +251,7 @@ class PlayerStats:
 
     def __init__(self):
         self.speed = 500
-        self.chunkRenderDist = 2.0
+        self.chunkRenderDist = 16.0
 
 
 class Player:
@@ -303,7 +303,7 @@ class Chunk:
 
     def __init__(self, pos : glm.vec3, noise):
         self.pos = pos
-        self.voxels =  [[[0 for i in range(17)] for j in range(17)]for k in range(17)]
+        self.voxels =  [[[0 for i in range(9)] for j in range(9)]for k in range(9)]
         self.verts = []
         self.nextQuad = [0.0 for i in range(54)]
         self.GenerateVoxels(noise)
@@ -311,14 +311,14 @@ class Chunk:
 
 
     def GenerateVoxels(self, noise):
-        for x in range(17):
-            for y in range(17):
-                for z in range(17):
-                    print("(" + str(x) + ", " + str(y) + ", " + str(z))
+        for x in range(9):
+            for y in range(9):
+                for z in range(9):
+                    #print("(" + str(x) + ", " + str(y) + ", " + str(z))
                     
                     self.voxels[x][y][z] = np.floor(((((x + self.pos.x) / 2 + (y + self.pos.y) / 2 + (z + self.pos.z) / 2) % 6) * 6) / 24 + 0.1)
                         
-        print(self.voxels)
+        #print(self.voxels)
                     
                     
     def GenerateXQuad(self, x : int, y : int, z : int):
@@ -326,9 +326,9 @@ class Chunk:
         dir = self.voxels[x][y][z] - self.voxels[x + 1][y][z]
         
         
-        self.nextQuad[0] = x + 1
-        self.nextQuad[1] = y
-        self.nextQuad[2] = z
+        self.nextQuad[0] = x + 1 + self.pos.x
+        self.nextQuad[1] = y + self.pos.y
+        self.nextQuad[2] = z + self.pos.z
         self.nextQuad[3] = 1.0
         self.nextQuad[4] = 1.0
         self.nextQuad[5] = 1.0
@@ -336,9 +336,9 @@ class Chunk:
         self.nextQuad[7] = 0.0
         self.nextQuad[8] = 0.0
         
-        self.nextQuad[9] = x + 1
-        self.nextQuad[10] = y + 1
-        self.nextQuad[11] = z
+        self.nextQuad[9] = x + 1 + self.pos.x
+        self.nextQuad[10] = y + 1 + self.pos.y
+        self.nextQuad[11] = z + self.pos.z
         self.nextQuad[12] = 1.0
         self.nextQuad[13] = 1.0
         self.nextQuad[14] = 1.0
@@ -346,9 +346,9 @@ class Chunk:
         self.nextQuad[16] = 0.0
         self.nextQuad[17] = 0.0
         
-        self.nextQuad[18] = x + 1
-        self.nextQuad[19] = y + 1
-        self.nextQuad[20] = z + 1
+        self.nextQuad[18] = x + 1 + self.pos.x
+        self.nextQuad[19] = y + 1 + self.pos.y
+        self.nextQuad[20] = z + 1 + self.pos.z
         self.nextQuad[21] = 1.0
         self.nextQuad[22] = 1.0
         self.nextQuad[23] = 1.0
@@ -356,9 +356,9 @@ class Chunk:
         self.nextQuad[25] = 0.0
         self.nextQuad[26] = 0.0
         
-        self.nextQuad[27] = x + 1
-        self.nextQuad[28] = y
-        self.nextQuad[29] = z
+        self.nextQuad[27] = x + 1 + self.pos.x
+        self.nextQuad[28] = y + self.pos.y
+        self.nextQuad[29] = z + self.pos.z
         self.nextQuad[30] = 1.0
         self.nextQuad[31] = 1.0
         self.nextQuad[32] = 1.0
@@ -366,9 +366,9 @@ class Chunk:
         self.nextQuad[34] = 0.0
         self.nextQuad[35] = 0.0
         
-        self.nextQuad[36] = x + 1
-        self.nextQuad[37] = y + 1
-        self.nextQuad[38] = z + 1
+        self.nextQuad[36] = x + 1 + self.pos.x
+        self.nextQuad[37] = y + 1 + self.pos.y
+        self.nextQuad[38] = z + 1 + self.pos.z
         self.nextQuad[39] = 1.0
         self.nextQuad[40] = 1.0
         self.nextQuad[41] = 1.0
@@ -376,9 +376,9 @@ class Chunk:
         self.nextQuad[43] = 0.0
         self.nextQuad[44] = 0.0
         
-        self.nextQuad[45] = x + 1
-        self.nextQuad[46] = y
-        self.nextQuad[47] = z + 1
+        self.nextQuad[45] = x + 1 + self.pos.x
+        self.nextQuad[46] = y + self.pos.y
+        self.nextQuad[47] = z + 1 + self.pos.z
         self.nextQuad[48] = 1.0
         self.nextQuad[49] = 1.0
         self.nextQuad[50] = 1.0
@@ -394,9 +394,9 @@ class Chunk:
         dir = self.voxels[x][y][z] - self.voxels[x][y + 1][z]
         
         
-        self.nextQuad[0] = x
-        self.nextQuad[1] = y + 1
-        self.nextQuad[2] = z
+        self.nextQuad[0] = x + self.pos.x
+        self.nextQuad[1] = y + 1 + self.pos.y
+        self.nextQuad[2] = z + self.pos.z
         self.nextQuad[3] = 1.0
         self.nextQuad[4] = 1.0
         self.nextQuad[5] = 1.0
@@ -404,9 +404,9 @@ class Chunk:
         self.nextQuad[7] = dir
         self.nextQuad[8] = 0.0
         
-        self.nextQuad[9] = x
-        self.nextQuad[10] = y + 1
-        self.nextQuad[11] = z + 1
+        self.nextQuad[9] = x + self.pos.x
+        self.nextQuad[10] = y + 1 + self.pos.y
+        self.nextQuad[11] = z + 1 + self.pos.z
         self.nextQuad[12] = 1.0
         self.nextQuad[13] = 1.0
         self.nextQuad[14] = 1.0
@@ -414,9 +414,9 @@ class Chunk:
         self.nextQuad[16] = dir
         self.nextQuad[17] = 0.0
         
-        self.nextQuad[18] = x + 1
-        self.nextQuad[19] = y + 1
-        self.nextQuad[20] = z + 1
+        self.nextQuad[18] = x + 1 + self.pos.x
+        self.nextQuad[19] = y + 1 + self.pos.y
+        self.nextQuad[20] = z + 1 + self.pos.z
         self.nextQuad[21] = 1.0
         self.nextQuad[22] = 1.0
         self.nextQuad[23] = 1.0
@@ -424,9 +424,9 @@ class Chunk:
         self.nextQuad[25] = dir
         self.nextQuad[26] = 0.0
         
-        self.nextQuad[27] = x
-        self.nextQuad[28] = y + 1
-        self.nextQuad[29] = z
+        self.nextQuad[27] = x + self.pos.x
+        self.nextQuad[28] = y + 1 + self.pos.y
+        self.nextQuad[29] = z + self.pos.z
         self.nextQuad[30] = 1.0
         self.nextQuad[31] = 1.0
         self.nextQuad[32] = 1.0
@@ -434,9 +434,9 @@ class Chunk:
         self.nextQuad[34] = dir
         self.nextQuad[35] = 0.0
         
-        self.nextQuad[36] = x + 1
-        self.nextQuad[37] = y + 1
-        self.nextQuad[38] = z + 1
+        self.nextQuad[36] = x + 1 + self.pos.x
+        self.nextQuad[37] = y + 1 + self.pos.y
+        self.nextQuad[38] = z + 1 + self.pos.z
         self.nextQuad[39] = 1.0
         self.nextQuad[40] = 1.0
         self.nextQuad[41] = 1.0
@@ -444,9 +444,9 @@ class Chunk:
         self.nextQuad[43] = dir
         self.nextQuad[44] = 0.0
         
-        self.nextQuad[45] = x + 1
-        self.nextQuad[46] = y + 1
-        self.nextQuad[47] = z
+        self.nextQuad[45] = x + 1 + self.pos.x
+        self.nextQuad[46] = y + 1 + self.pos.y
+        self.nextQuad[47] = z + self.pos.z
         self.nextQuad[48] = 1.0
         self.nextQuad[49] = 1.0
         self.nextQuad[50] = 1.0
@@ -462,9 +462,9 @@ class Chunk:
         dir = self.voxels[x][y][z] - self.voxels[x][y][z + 1]
         
         
-        self.nextQuad[0] = x
-        self.nextQuad[1] = y
-        self.nextQuad[2] = z + 1
+        self.nextQuad[0] = x + self.pos.x
+        self.nextQuad[1] = y + self.pos.y
+        self.nextQuad[2] = z + 1 + self.pos.z
         self.nextQuad[3] = 1.0
         self.nextQuad[4] = 1.0
         self.nextQuad[5] = 1.0
@@ -472,9 +472,9 @@ class Chunk:
         self.nextQuad[7] = 0.0
         self.nextQuad[8] = dir
         
-        self.nextQuad[9] = x
-        self.nextQuad[10] = y + 1
-        self.nextQuad[11] = z + 1
+        self.nextQuad[9] = x + self.pos.x
+        self.nextQuad[10] = y + 1 + self.pos.y
+        self.nextQuad[11] = z + 1 + self.pos.z
         self.nextQuad[12] = 1.0
         self.nextQuad[13] = 1.0
         self.nextQuad[14] = 1.0
@@ -482,9 +482,9 @@ class Chunk:
         self.nextQuad[16] = 0.0
         self.nextQuad[17] = dir
         
-        self.nextQuad[18] = x + 1
-        self.nextQuad[19] = y + 1
-        self.nextQuad[20] = z + 1
+        self.nextQuad[18] = x + 1 + self.pos.x
+        self.nextQuad[19] = y + 1 + self.pos.y
+        self.nextQuad[20] = z + 1 + self.pos.z
         self.nextQuad[21] = 1.0
         self.nextQuad[22] = 1.0
         self.nextQuad[23] = 1.0
@@ -492,9 +492,9 @@ class Chunk:
         self.nextQuad[25] = 0.0
         self.nextQuad[26] = dir
         
-        self.nextQuad[27] = x
-        self.nextQuad[28] = y
-        self.nextQuad[29] = z + 1
+        self.nextQuad[27] = x + self.pos.x
+        self.nextQuad[28] = y + self.pos.y
+        self.nextQuad[29] = z + 1 + self.pos.z
         self.nextQuad[30] = 1.0
         self.nextQuad[31] = 1.0
         self.nextQuad[32] = 1.0
@@ -502,9 +502,9 @@ class Chunk:
         self.nextQuad[34] = 0.0
         self.nextQuad[35] = dir
         
-        self.nextQuad[36] = x + 1
-        self.nextQuad[37] = y + 1
-        self.nextQuad[38] = z + 1
+        self.nextQuad[36] = x + 1 + self.pos.x
+        self.nextQuad[37] = y + 1 + self.pos.y
+        self.nextQuad[38] = z + 1 + self.pos.z
         self.nextQuad[39] = 1.0
         self.nextQuad[40] = 1.0
         self.nextQuad[41] = 1.0
@@ -512,9 +512,9 @@ class Chunk:
         self.nextQuad[43] = 0.0
         self.nextQuad[44] = dir
         
-        self.nextQuad[45] = x + 1
-        self.nextQuad[46] = y
-        self.nextQuad[47] = z + 1
+        self.nextQuad[45] = x + 1 + self.pos.x
+        self.nextQuad[46] = y + self.pos.y
+        self.nextQuad[47] = z + 1 + self.pos.z
         self.nextQuad[48] = 1.0
         self.nextQuad[49] = 1.0
         self.nextQuad[50] = 1.0
@@ -528,9 +528,9 @@ class Chunk:
     def GenerateChunkMesh(self):
 
         
-        for x in range(16):
-            for y in range(16):
-                for z in range(16):
+        for x in range(8):
+            for y in range(8):
+                for z in range(8):
                     if self.voxels[x][y][z] != self.voxels[x + 1][y][z]:
                         #print("(" + str(self.voxels[x][y][z]) + ", " + str(self.voxels[x + 1][y][z]) + ")")
                         self.GenerateXQuad(x, y, z)
@@ -550,33 +550,77 @@ class VoxelWorld:
 
     def __init__(self, player : Player, noise : int):
         self.noise = noise
-        self.Update(player)
+        #self.chunks = []
+        #self.chunks.append(Chunk(glm.vec3(0.0, 0.0, 0.0), self.noise))
+        self.Start(player)
         
     
-    def CreateNearbyChunks(self, player : Player):
+    def Start(self, player : Player):
+        self.chunks = []
+
         minPos : glm.ivec3
         minPos = glm.ivec3(0, 0, 0)
-        minPos.x = int(np.floor(player.cam.pos.x - player.stats.chunkRenderDist))
-        minPos.y = int(np.floor(player.cam.pos.y - player.stats.chunkRenderDist))
-        minPos.z = int(np.floor(player.cam.pos.z - player.stats.chunkRenderDist))
+        minPos.x = int(np.floor((player.cam.pos.x - player.stats.chunkRenderDist) / 8.0))
+        minPos.y = int(np.floor((player.cam.pos.y - player.stats.chunkRenderDist) / 8.0))
+        minPos.z = int(np.floor((player.cam.pos.z - player.stats.chunkRenderDist) / 8.0))
         
         maxPos : glm.ivec3
         maxPos = glm.ivec3(0, 0, 0)
-        maxPos.x = int(np.ceil(player.cam.pos.x + player.stats.chunkRenderDist))
-        maxPos.y = int(np.ceil(player.cam.pos.y + player.stats.chunkRenderDist))
-        maxPos.z = int(np.ceil(player.cam.pos.z + player.stats.chunkRenderDist))
+        maxPos.x = int(np.ceil((player.cam.pos.x + player.stats.chunkRenderDist) / 8.0))
+        maxPos.y = int(np.ceil((player.cam.pos.y + player.stats.chunkRenderDist) / 8.0))
+        maxPos.z = int(np.ceil((player.cam.pos.z + player.stats.chunkRenderDist) / 8.0))
         
         for x in range(maxPos.x - minPos.x):
             for y in range(maxPos.y - minPos.y):
                 for z in range(maxPos.z - minPos.z):
-                    self.chunks.append(Chunk(glm.vec3(x + minPos.x, y + minPos.y, z + minPos.z), self.noise))
+                    self.chunks.append(Chunk(glm.vec3((x + minPos.x) * 8.0 - 4.0, (y + minPos.y) * 8.0 - 4.0, (z + minPos.z) * 8.0 - 4.0), self.noise))
     
-        
     def Update(self, player : Player):
-        self.chunks = []
-        self.CreateNearbyChunks(player)
+        minPos : glm.ivec3
+        minPos = glm.ivec3(0, 0, 0)
+        minPos.x = int(np.floor((player.cam.pos.x - player.stats.chunkRenderDist) / 8.0))
+        minPos.y = int(np.floor((player.cam.pos.y - player.stats.chunkRenderDist) / 8.0))
+        minPos.z = int(np.floor((player.cam.pos.z - player.stats.chunkRenderDist) / 8.0))
         
+        maxPos : glm.ivec3
+        maxPos = glm.ivec3(0, 0, 0)
+        maxPos.x = int(np.ceil((player.cam.pos.x + player.stats.chunkRenderDist) / 8.0))
+        maxPos.y = int(np.ceil((player.cam.pos.y + player.stats.chunkRenderDist) / 8.0))
+        maxPos.z = int(np.ceil((player.cam.pos.z + player.stats.chunkRenderDist) / 8.0))
         
+        for x in range(maxPos.x - minPos.x):
+            for y in range(maxPos.y - minPos.y):
+                for z in range(maxPos.z - minPos.z):
+                    
+                    pos = glm.vec3((x + minPos.x) * 8.0 - 4.0, (y + minPos.y) * 8.0 - 4.0, (z + minPos.z) * 8.0 - 4.0)
+                    
+                    chunkAlreadyExists = False
+
+                    for chunk in self.chunks:
+                        chunk : Chunk
+                        if pos == chunk.pos:
+                            chunkAlreadyExists = True
+                            break
+
+                    if not chunkAlreadyExists:
+                        self.chunks.append(Chunk(pos, self.noise))
+
+
+        for i in range(len(self.chunks)):
+            if i >= len(self.chunks):
+                break
+
+            if self.chunks[i].pos.x < minPos.x * 8.0 - 4.0 or self.chunks[i].pos.y < minPos.y * 8.0 - 4.0 or self.chunks[i].pos.z < minPos.z * 8.0 - 4.0 or self.chunks[i].pos.x > maxPos.x * 8.0 - 4.0 or self.chunks[i].pos.y > maxPos.y * 8.0 - 4.0 or self.chunks[i].pos.z > maxPos.z * 8.0 - 4.0:
+                self.chunks[i].mesh.Destroy()
+                del self.chunks[i]
+
+    
+    def Destroy(self):
+        for chunk  in self.chunks:
+            chunk : Chunk
+            chunk.mesh.Destroy()
+            
+
     def Draw(self, shader : Shader):
         shader.Use()
 
@@ -743,7 +787,7 @@ def Start():
         sys.exit(2) 
     glfw.make_context_current(window) 
     
-    gl.glEnable(gl.GL_DEPTH_TEST);
+    gl.glEnable(gl.GL_DEPTH_TEST)
 
     glfw.set_window_size_callback(window, FramebufferSizeCallback)
     glfw.set_cursor_pos_callback(window, MouseCallback)
@@ -789,6 +833,7 @@ def Update():
     # Draw the triangle 
     testObj.Draw()
     global world
+    world.Update(player)
     world.Draw(shaderManager.voxel_diffuse)
 
     glfw.swap_buffers(window) 
@@ -849,6 +894,7 @@ if (__name__ == '__main__'):
 
     
     testObj.Destroy()
+    world.Destroy()
     
     
 
